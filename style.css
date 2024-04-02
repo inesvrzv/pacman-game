@@ -56,6 +56,29 @@ h2 {
 .high-score-team2 { color: #d10123; }
 .high-score-team3 { color: #822ba0; }
 
+/* Team colors */
+.team1 { color: #2468ea; }
+.team2 { color: #d10123; }
+.team3 { color: #822ba0; }
+
+/* Adjust select element */
+#team-select {
+  background: #000;
+  border: 2px solid #ffc400;
+  color: #ffffff; /* Default text color */
+  margin-bottom: 0.5em;
+  padding: 0.5em;
+  border-radius: 5px;
+  width: calc(100% - 1em);
+  margin-right: 20px;
+}
+
+/* Set color for selected option */
+#team-select option:checked {
+  color: inherit; /* Inherit color from parent */
+}
+
+
 #high-scores ol {
   padding: 0; /* Removes default padding */
   margin: 10px 0; /* Adds more space between list items */
