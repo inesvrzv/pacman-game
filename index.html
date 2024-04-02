@@ -13,12 +13,20 @@
     <div id="pacman"></div>
     <div id="start-screen">
         <input type="text" id="player-name" placeholder="Enter your name" required />
-        <select id="team-select" required>
+        <select id="team-select" onchange="changeColor()" required>
             <option value="" disabled selected>Select your team</option>
-            <option value="team1">RNK</option>
-            <option value="team2">DKR</option>
-            <option value="team3">KMK</option>
+            <option value="team1" style="color: #2468ea;">RNK</option>
+            <option value="team2" style="color: #d10123;">DKR</option>
+            <option value="team3" style="color: #822ba0;">KMK</option>
         </select>
+        
+        <script>
+        function changeColor() {
+            var select = document.getElementById("team-select");
+            var selectedOption = select.options[select.selectedIndex];
+            select.style.color = selectedOption.style.color;
+        }
+        </script>
         <button id="start-game">Start Game</button>
     </div>
     
