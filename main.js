@@ -47,17 +47,20 @@ async function refreshAndDisplayScores() {
 function updateHighScoresUI(scores) {
     const scoresList = document.getElementById('high-scores').querySelector('ol');
     scoresList.innerHTML = ''; // Clear current scores
-    scores.forEach((score) => {
+
+    scores.forEach((score, index) => {
+        const rank = index + 1;  // Calculate rank based on array position
         const listItem = document.createElement('li');
-        listItem.textContent = `${score.name}: ${score.score}`;
+        listItem.textContent = `${rank}. ${score.name}: ${score.score}`;
         listItem.className = `high-score-${score.team}`; // Apply color based on team
         scoresList.appendChild(listItem);
     });
+
     if (scores.length === 0) {
-        console.log('No high scores to display.');
         scoresList.innerHTML = '<li>No high scores yet!</li>';
     }
 }
+
 
 // Initialize Supabase client and define global functions
 function initApp() {
@@ -1030,25 +1033,91 @@ var PACMAN = (function () {
         }
         return true;
     }    
+    var GAME_OVER = 12; // The value should be unique and not conflict with existing states
 
-    function loseLife() {        
-        user.loseLife();
-        if (user.getLives() > 0) {
-            startLevel();
-        } else {
-            // Only attempt to save and refresh scores if it hasn't been done yet for this game over
-            if (!isScoreSaved) {
-                // Save the high score
-                saveHighScore(playerName, user.theScore(), playerTeam)
-                    .then(() => {
-                        // Refresh and display the scores after the new high score is saved
-                        refreshAndDisplayScores(); // This replaces the loadHighScores call
-                    })
-                    .catch(error => console.error('Failed to save or refresh scores', error));
-                // Ensure we don't attempt to save the score again until a new game starts
-                isScoreSaved = true;
+    function setState(newState) {
+        if (state !== newState) {
+            state = newState;
+            stateChanged = true;
+    
+            if (state === GAME_OVER) {
+                // Handle game over logic, like stopping the game loop or disabling controls
+                clearInterval(timer); // Example: stop the main game loop
             }
         }
+    }
+
+    function loseLife() {        
+        console.log('loseLife called, Lives left:', user.getLives());
+        user.loseLife();
+    
+        if (user.getLives() > 0) {
+            console.log('Starting new level...');
+            startLevel();
+        } else {
+            console.log("Final Game Over");
+            if (!isScoreSaved) {
+                isScoreSaved = true;
+                saveHighScore(playerName, user.theScore(), playerTeam)
+                    .then(() => {
+                        refreshAndDisplayScores(); // Refresh scores after saving
+                    })
+                    .catch(error => console.error('Failed to save or refresh scores', error));
+            }
+            // Show game over screen only once
+            if (state !== GAME_OVER) {
+                showGameOverScreen(user.theScore());
+                setState(GAME_OVER);
+            }
+        }
+    }
+    
+    
+    
+    
+    function showGameOverScreen(score) {
+        console.log('Showing game over screen');
+        let gameOverScreen = document.getElementById('game-over-screen');
+        if (!gameOverScreen) {
+            gameOverScreen = document.createElement('div');
+            gameOverScreen.id = 'game-over-screen';
+            document.body.appendChild(gameOverScreen);
+        }
+    
+        gameOverScreen.style.position = 'fixed';  
+        gameOverScreen.style.left = '50%';
+        gameOverScreen.style.top = '50%';
+        gameOverScreen.style.transform = 'translate(-50%, -50%)';
+        gameOverScreen.style.zIndex = '1000';  
+        gameOverScreen.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+        gameOverScreen.style.color = 'white';
+        gameOverScreen.style.padding = '20px';
+        gameOverScreen.style.textAlign = 'center';
+        gameOverScreen.innerHTML = `
+            <h1>Game Over</h1>
+            <p>Your score: ${score}</p>
+            <p>Your rank: <span id="player-rank">calculating...</span></p>
+            <button onclick="startNewGame()" id="start-game">Start New Game</button>
+        `;
+        calculateRank(score);
+    }
+    
+    
+
+    function calculateRank(score) {
+        loadHighScores().then(scores => {
+            var rank = scores.findIndex(s => s.score <= score) + 1;
+            var rankElement = document.getElementById('player-rank');
+            if (rankElement) {
+                rankElement.textContent = rank > 0 ? rank : 'N/A';
+            }
+        }).catch(error => {
+            console.error('Error calculating rank:', error);
+            var rankElement = document.getElementById('player-rank');
+            if (rankElement) {
+                rankElement.textContent = 'Error';
+            }
+        });
     }
     
     
@@ -1223,17 +1292,28 @@ var PACMAN = (function () {
             e.stopPropagation();
         }
     };
+    window.startNewGame = startNewGame;
 
     function startNewGame() {
-        isScoreSaved = false; // Reset the flag
-        setState(WAITING);
+        isScoreSaved = false;
+        state = WAITING; // Reset the state to the initial state
         level = 1;
         user.reset();
         map.reset();
-        map.draw(ctx);
         refreshAndDisplayScores();
         startLevel();
+        
+        // Hide or remove the game over screen
+        let gameOverScreen = document.getElementById('game-over-screen');
+        if (gameOverScreen) {
+            gameOverScreen.style.display = 'none'; // Hide the game over screen
+            // Or if you want to remove the element entirely, use:
+            // gameOverScreen.parentNode.removeChild(gameOverScreen);
+        }
     }
+    
+    
+    
     
     
     function init(wrapper, root) {
