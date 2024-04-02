@@ -67,7 +67,103 @@ function initApp() {
 }
 
 // The initApp function will be called as soon as the window loads
-window.onload = initApp;
+//window.onload = initApp;
+// Initialization of Supabase client and high scores loading happens on DOMContentLoaded
+document.addEventListener('DOMContentLoaded', function() {
+    initApp(); // Set up initial state but don't start the game yet
+
+    const startGameButton = document.getElementById('start-game');
+    const el = document.getElementById("pacman");
+
+    if (el && 'getContext' in document.createElement('canvas')) {
+        if (startGameButton) {
+            startGameButton.addEventListener('click', function() {
+                validateAndProceed(el); // Pass the canvas element to the validate function
+            });
+        } else {
+            console.error("Start game button not found");
+        }
+    } else {
+        el.textContent = "Sorry, needs a browser with support for canvas.";
+    }
+});
+
+function validateAndProceed(el) {
+    const playerNameInput = document.getElementById('player-name').value.trim();
+    const teamSelectInput = document.getElementById('team-select').value;
+
+    if (!playerNameInput || !teamSelectInput) {
+        alert("Please enter your name and select a team before starting the game.");
+        return; // Stop the function here if validation fails
+    }
+
+    // Set global variables or use them directly as needed
+    playerName = playerNameInput;
+    playerTeam = teamSelectInput;
+    document.getElementById('start-screen').style.display = 'none'; // Hide the start screen
+
+    // Now initialize the game after the player clicks start and validation passes
+    PACMAN.init(el, '.');
+}
+
+
+
+// Step 2.2: Game Initialization Logic
+function initializeGame() {
+    if (!gameState.isValidationPassed) {
+        console.error("Game initialization aborted: Validation failed.");
+        return;
+    }
+
+    // Assuming PACMAN.init and game start logic goes here
+    const gameContainer = document.getElementById("pacman");
+    if (gameContainer) {
+        PACMAN.init(gameContainer, '.');
+    } else {
+        console.error("Game container element not found.");
+    }
+
+    // Set playerName and playerTeam in the game logic as needed
+    window.playerName = gameState.playerName;
+    window.playerTeam = gameState.playerTeam;
+}
+
+function validateAndStartGame() {
+    // Retrieve user input values
+    const playerNameInput = document.getElementById('player-name').value.trim();
+    const teamSelect = document.getElementById('team-select');
+    const teamSelectValue = teamSelect.options[teamSelect.selectedIndex].value;
+
+    // Perform validation check for player name and team selection
+    if (!playerNameInput || teamSelectValue === "") {
+        // If validation fails, show an alert and prevent the game from starting
+        alert("Please enter your name and select a team before starting the game.");
+        return; // Exit the function to halt game start process
+    }
+
+    // Hide the start screen since validation passed
+    document.getElementById('start-screen').style.display = 'none';
+
+    // Variables playerName and playerTeam are set for use in the game
+    window.playerName = playerNameInput;
+    window.playerTeam = teamSelectValue;
+
+    // Now that validation has passed, the game can be safely started
+    startGameAfterValidation();
+}
+
+function startGameAfterValidation() {
+    // Initialize PACMAN game here after validation success
+    // Note: Ensure that the PACMAN.init or similar function does not get called elsewhere without validation
+    const gameContainer = document.getElementById("pacman");
+    if (gameContainer) {
+        PACMAN.init(gameContainer, '.');
+    } else {
+        console.error("Game container element not found.");
+    }
+}
+
+
 
 
 const SUPABASE_TABLE = 'high_scores';
@@ -1100,53 +1196,62 @@ var PACMAN = (function () {
     
     
     function init(wrapper, root) {
-        
         var i, len, ghost,
             blockSize = wrapper.offsetWidth / 19,
-            canvas    = document.createElement("canvas");
-        
+            canvas = document.createElement("canvas");
+    
         canvas.setAttribute("width", (blockSize * 19) + "px");
         canvas.setAttribute("height", (blockSize * 22) + 30 + "px");
-    
         wrapper.appendChild(canvas);
-
-        loaded = function() {
-            dialog("Press N to Start");
-            document.addEventListener("keydown", keyDown, true);
-            document.addEventListener("keypress", keyPress, true); 
-            timer = window.setInterval(mainLoop, 1000 / Pacman.FPS);
-        };
     
-        ctx  = canvas.getContext('2d');
+        ctx = canvas.getContext('2d');
     
-        map   = new Pacman.Map(blockSize);
-        user  = new Pacman.User({ 
-            "completedLevel" : completedLevel, 
-            "eatenPill"      : eatenPill 
+        map = new Pacman.Map(blockSize);
+        user = new Pacman.User({
+            "completedLevel": completedLevel,
+            "eatenPill": eatenPill
         }, map);
     
         for (i = 0, len = ghostSpecs.length; i < len; i += 1) {
-            ghost = new Pacman.Ghost({"getTick":getTick}, map, ghostSpecs[i]);
+            ghost = new Pacman.Ghost({"getTick": getTick}, map, ghostSpecs[i]);
             ghosts.push(ghost);
         }
         
         map.draw(ctx);
         dialog("Loading ...");
-        
-        document.getElementById('start-game').addEventListener('click', function() {
-            playerName = document.getElementById('player-name').value;
-            playerTeam = document.getElementById('team-select').value;
-            document.getElementById('start-menu').style.display = 'none'; // Hide the start menu
-            loaded(); // Now start the game
+    
+        // Always enable the Start Game button, but perform validation on click
+        var startButton = document.getElementById('start-game');
+        startButton.disabled = false; // The button is always enabled, but validation happens onClick
+    
+        startButton.addEventListener('click', function() {
+            var playerNameInput = document.getElementById('player-name').value.trim();
+            var teamSelectInput = document.getElementById('team-select').value;
+    
+            if (!playerNameInput || !teamSelectInput) {
+                // If validation fails, alert the user and do not start the game
+                alert("Please enter your name and select a team before starting the game.");
+            } else {
+                // If validation passes, hide the start screen and start the game
+                playerName = playerNameInput;
+                playerTeam = teamSelectInput;
+                document.getElementById('start-screen').style.display = 'none';
+                loaded(); // Now start the game
+            }
         });
     
-        // Immediately start the game after initialization since there's no loading to wait for
-        loaded();
-    };
+        document.addEventListener("keydown", keyDown, true);
+        document.addEventListener("keypress", keyPress, true);
     
-
+        if (timer) {
+            clearInterval(timer); // Clear the existing interval
+        }
+        timer = setInterval(mainLoop, 1000 / Pacman.FPS);
     
-        
+        loaded(); // Load the game assets and high scores
+    }
+    
+       
     function loaded() {
 
         dialog("Press N to Start");
@@ -1156,7 +1261,10 @@ var PACMAN = (function () {
         
         loadHighScores(); // Fetch high scores as soon as the game is loaded
 
-        timer = window.setInterval(mainLoop, 1000 / Pacman.FPS);
+        if (timer) {
+            clearInterval(timer); // Clear the existing interval
+        }
+        timer = setInterval(mainLoop, 1000 / Pacman.FPS);
     };
     return {
         "init" : init,
@@ -1338,28 +1446,3 @@ Object.prototype.clone = function () {
     return newObj;
 };
 
-document.addEventListener('DOMContentLoaded', function() {
-    var el = document.getElementById("pacman");
-    if (el && 'getContext' in document.createElement('canvas')) {
-        // Attach event listener to the start game button
-        var startGameButton = document.getElementById('start-game');
-        if (startGameButton) {
-            startGameButton.addEventListener('click', function() {
-                var playerNameInput = document.getElementById('player-name');
-                var teamSelectInput = document.getElementById('team-select');
-
-                if (playerNameInput && teamSelectInput) {
-                    playerName = playerNameInput.value;
-                    playerTeam = teamSelectInput.value;
-                    document.getElementById('start-screen').style.display = 'none'; // Hide the start screen
-                    // Now initialize the game after the player clicks start
-                    PACMAN.init(el, '.');
-                }
-            });
-        } else {
-            console.error("Start game button not found");
-        }
-    } else {
-        el.textContent = "Sorry, needs a browser with support for canvas.";
-    }
-});
