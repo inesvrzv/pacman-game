@@ -1055,27 +1055,28 @@ var PACMAN = (function () {
             console.log('Starting new level...');
             startLevel();
         } else {
-            console.log("Final Game Over");
+            console.log("Final Game Over, State before setting GAME_OVER:", state);
+            let finalScore = user.theScore(); // Capture the score right before any game state reset
+    
             if (!isScoreSaved) {
                 isScoreSaved = true;
-                saveHighScore(playerName, user.theScore(), playerTeam)
+                saveHighScore(playerName, finalScore, playerTeam)
                     .then(() => {
                         refreshAndDisplayScores(); // Refresh scores after saving
                     })
                     .catch(error => console.error('Failed to save or refresh scores', error));
             }
-            // Show game over screen only once
+    
+            // Conditionally show the game over screen to avoid repetition
             if (state !== GAME_OVER) {
-                showGameOverScreen(user.theScore());
+                showGameOverScreen(finalScore); // Pass the captured score
                 setState(GAME_OVER);
             }
         }
     }
     
     
-    
-    
-    function showGameOverScreen(score) {
+    async function showGameOverScreen(score) {
         console.log('Showing game over screen');
         let gameOverScreen = document.getElementById('game-over-screen');
         if (!gameOverScreen) {
@@ -1084,6 +1085,8 @@ var PACMAN = (function () {
             document.body.appendChild(gameOverScreen);
         }
     
+        // Ensure the game over screen is visible
+        gameOverScreen.style.display = 'block';  
         gameOverScreen.style.position = 'fixed';  
         gameOverScreen.style.left = '50%';
         gameOverScreen.style.top = '50%';
@@ -1093,18 +1096,40 @@ var PACMAN = (function () {
         gameOverScreen.style.color = 'white';
         gameOverScreen.style.padding = '20px';
         gameOverScreen.style.textAlign = 'center';
+        gameOverScreen.style.borderRadius = '10px'; // Added a border radius for a softer look
+        gameOverScreen.style.fontSize = '20px'; // Adjust the font size for better readability
+        
+        // Initialize game over screen HTML structure
         gameOverScreen.innerHTML = `
             <h1>Game Over</h1>
-            <p>Your score: ${score}</p>
-            <p>Your rank: <span id="player-rank">calculating...</span></p>
-            <button onclick="startNewGame()" id="start-game">Start New Game</button>
-        `;
-        calculateRank(score);
+            <p>Score: ${score}</p>
+            <p><span id="player-rank">calculating...</span></p>
+            <button id="start-new-game-button" style="padding: 10px 20px; font-size: 16px; cursor: pointer;">Start New Game</button>
+        `; // Added inline styling for the button for better visibility
+    
+        // Attach the event listener to the Start New Game button
+        const startNewGameButton = document.getElementById("start-new-game-button");
+        startNewGameButton.onclick = () => {
+            PACMAN.startNewGame(); // Make sure this aligns with how you're structuring your game start logic
+        };
+    
+        // Calculate and update rank after fetching high scores
+        try {
+            const scores = await loadHighScores();
+            const rank = scores.findIndex(s => s.score <= score) + 1;
+            document.getElementById('player-rank').textContent = rank > 0 ? `Rank: ${rank}` : 'N/A';
+        } catch (error) {
+            console.error('Error calculating rank:', error);
+            document.getElementById('player-rank').textContent = 'Error calculating rank';
+        }
     }
     
     
+    
+    
 
-    function calculateRank(score) {
+    async function calculateRank(score) {
+        const scores = await loadHighScores();
         loadHighScores().then(scores => {
             var rank = scores.findIndex(s => s.score <= score) + 1;
             var rankElement = document.getElementById('player-rank');
@@ -1118,6 +1143,7 @@ var PACMAN = (function () {
                 rankElement.textContent = 'Error';
             }
         });
+        document.getElementById('player-rank').textContent = calculatedRank;
     }
     
     
@@ -1220,7 +1246,11 @@ var PACMAN = (function () {
     };
 
     function mainLoop() {
-
+        if (state === GAME_OVER && !isGameOverShown) {
+            let finalScore = user.theScore();
+            showGameOverScreen(finalScore);
+            isGameOverShown = true; // Prevent further calls
+        }
         var diff;
 
         if (state !== PAUSE) { 
@@ -1295,22 +1325,27 @@ var PACMAN = (function () {
     window.startNewGame = startNewGame;
 
     function startNewGame() {
-        isScoreSaved = false;
-        state = WAITING; // Reset the state to the initial state
-        level = 1;
-        user.reset();
-        map.reset();
-        refreshAndDisplayScores();
-        startLevel();
+        console.log("startNewGame called. Resetting game.");
+        isScoreSaved = false; // Reset score saving flag
+        state = WAITING; // Or PLAYING, depending on how you wish to start the new game
+        level = 1; // Reset level to 1 or appropriate starting level
+        user.reset(); // Reset user/player state
+        map.reset(); // Reset game map
+        refreshAndDisplayScores(); // Refresh and display scores, if necessary
         
+        // Reset any flags or conditions that control the display of the game over screen
+        isGameOverShown = false; // Assuming you have a flag like this to control game over screen visibility
+    
         // Hide or remove the game over screen
         let gameOverScreen = document.getElementById('game-over-screen');
         if (gameOverScreen) {
-            gameOverScreen.style.display = 'none'; // Hide the game over screen
-            // Or if you want to remove the element entirely, use:
-            // gameOverScreen.parentNode.removeChild(gameOverScreen);
+            gameOverScreen.style.display = 'none';
         }
+    
+        startLevel(); // Function to start or restart the game level
     }
+    
+    
     
     
     
