@@ -1,3 +1,4 @@
+
 /*jslint browser: true, undef: true, eqeqeq: true, nomen: true, white: true */
 /*global window: false, document: false */
 
@@ -261,6 +262,17 @@ Pacman.Ghost = function (game, map, colour) {
         eatable   = null,
         eaten     = null,
         due       = null;
+
+    // Adjust speed based on level
+    function getSpeed() {
+        var levelMultiplier = Math.max(1, game.getLevel() * 0.1); // Increase speed by 10% per level
+        if (isVunerable()) {
+            return 1 * levelMultiplier;
+        } else if (isHidden()) {
+            return 4;
+        }
+        return 2 * levelMultiplier; // Base speed increased by level
+    }
     
     function getNewCoord(dir, current) { 
         
@@ -324,10 +336,20 @@ Pacman.Ghost = function (game, map, colour) {
             dir === UP && DOWN || UP;
     };
 
+    function getEatableTime() {
+        var levelMultiplier = Math.max(1, game.getLevel());
+        return 6 / levelMultiplier; // Decrease time by level
+    }
+
+    function getEatenTime() {
+        var levelMultiplier = Math.max(1, game.getLevel());
+        return 5 / levelMultiplier; // Decrease time by level
+    }
+
     function makeEatable() {
-        direction = oppositeDirection(direction);
         eatable = game.getTick();
-    };
+        direction = oppositeDirection(direction);
+    }
 
     function makeNormal() {
         eatable = null; // Ghost is no longer eatable
@@ -335,15 +357,21 @@ Pacman.Ghost = function (game, map, colour) {
     }
 
     function checkEatableTimeout() {
-        if (eatable !== null && secondsAgo(eatable) > 6) {
+        if (eatable && secondsAgo(eatable) > getEatableTime()) {
             makeNormal();
         }
     }
 
-    function eat() { 
-        eatable = null;
+    function checkEatenTimeout() {
+        if (eaten && secondsAgo(eaten) > getEatenTime()) {
+            eaten = null; // Ghost respawns
+        }
+    }
+
+    function eat() {
         eaten = game.getTick();
-    };
+        eatable = null;
+    }
 
     function pointToCoord(x) {
         return Math.round(x / 10);
@@ -466,7 +494,9 @@ Pacman.Ghost = function (game, map, colour) {
         "makeEatable" : makeEatable,
         "reset"       : reset,
         "move"        : move,
-        "draw"        : draw
+        "draw"        : draw,
+        "checkEatableTimeout": checkEatableTimeout,
+        "checkEatenTimeout": checkEatenTimeout
     };
 };
 
@@ -937,6 +967,15 @@ var PACMAN = (function () {
         return tick;
     };
     
+    function getLevel() {
+        return level;
+    }
+
+    function nextLevel() {
+        level += 1;
+        console.log('Advancing to level:', level);
+        startLevel();  // Reset game state for the new level
+    }
 
     function drawScore(text, position) {
         ctx.fillStyle = "white";
@@ -966,6 +1005,8 @@ var PACMAN = (function () {
         //audio.play("start");
         timerStart = tick;
         setState(COUNTDOWN);
+        user.resetPosition();
+        ghosts.forEach(ghost => ghost.reset());
     }    
 
     function keyDown(e) {
@@ -1267,8 +1308,10 @@ var PACMAN = (function () {
         timer = setInterval(mainLoop, 1000 / Pacman.FPS);
     };
     return {
-        "init" : init,
-        "startNewGame": startNewGame // Expose the startNewGame function
+        init: init,
+        startNewGame: startNewGame,
+        getLevel: getLevel,
+        nextLevel: nextLevel  // Make sure to expose this if you need to call it externally
     };
     
 }());
@@ -1445,4 +1488,3 @@ Object.prototype.clone = function () {
     }
     return newObj;
 };
-
