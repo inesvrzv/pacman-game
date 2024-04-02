@@ -81,7 +81,7 @@ h2 {
 
 #high-scores ol {
   padding: 0; /* Removes default padding */
-  margin: 10px 0; /* Adds more space between list items */
+  margin: 10px; /* Adds more space between list items */
   padding: 5px 0; /* Adds padding inside each list item */
   min-height: 20px; /* Ensures a minimum height for each list item */
 }
@@ -120,3 +120,4 @@ h2 {
     margin: auto; /* Center in the viewport */
   }
 }
+
