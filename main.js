@@ -1,4 +1,3 @@
-
 /*jslint browser: true, undef: true, eqeqeq: true, nomen: true, white: true */
 /*global window: false, document: false */
 
@@ -166,82 +165,74 @@ function startGameAfterValidation() {
         console.error("Game container element not found.");
     }
 }
-
-
-
-
-const SUPABASE_TABLE = 'high_scores';
-
-let isScoreSaved = false;
-
-var ghostImages = {
-    normal: new Image(),
-    vulnerable: new Image(),
-    eaten: new Image()
+// Initialization of game images
+let gameImages = {
+    pillImages: [],
+    ghostImages: {
+        normal: new Image(),
+        vulnerable: new Image(),
+        eaten: new Image()
+    },
+    pacmanImages: {
+        regular: new Image(),
+        dead: new Image()
+    }
 };
 
-var pacmanImages = {
-    regular: new Image(),
-    dead: new Image()
-};
+let totalImagesLoaded = 0;
+const totalUniqueImages = 9; // Adjust this to the actual number of images you're loading
 
-// Set the src after attaching the onload event to ensure the event is captured
-// Corrected image paths
-ghostImages.normal.src = 'ghostface_normal.png';
-ghostImages.vulnerable.src = 'ghostface_vulnerable.png';
-ghostImages.eaten.src = 'ghostface_eaten.png';
-pacmanImages.regular.src = 'face.png';
-pacmanImages.dead.src = 'dead.png';
-
-let imagesLoaded = 0;
-const totalImages = 5; // Total number of images you're loading
-
+// Image loaded handler
 function imageLoaded() {
-    imagesLoaded++;
-    if (imagesLoaded === totalImages) {
+    totalImagesLoaded++;
+    if (totalImagesLoaded === totalUniqueImages) {
         console.log("All images loaded successfully. Game can be started.");
-        // This is where you should enable the game to start, e.g., by enabling a "Start" button
+        // Start or enable game start here, like enabling a "Start" button
     }
 }
 
-// Attach the imageLoaded function to the onload event for each image
-ghostImages.normal.onload = imageLoaded;
-ghostImages.vulnerable.onload = imageLoaded;
-ghostImages.eaten.onload = imageLoaded;
-pacmanImages.regular.onload = imageLoaded;
-pacmanImages.dead.onload = imageLoaded;
+// Function to initialize and load all game images
+function loadGameImages() {
+    // Load pill images
+    let pillImageSources = ['pill1.png', 'pill2.png', 'pill3.png', 'pill4.png']; // Add your image filenames here
+    for (let i = 0; i < pillImageSources.length; i++) {
+        let img = new Image();
+        img.onload = imageLoaded;
+        img.onerror = () => console.error("Failed to load image", pillImageSources[i]);
+        img.src = pillImageSources[i];
+        gameImages.pillImages.push(img);
+    }
 
-var playerName = '';
-var playerTeam = '';
-var highScores = { team1: [], team2: [], team3: [] }; // Object to hold scores
+    // Load ghost and Pacman images
+    let ghostImageSources = {
+        normal: 'ghostface_normal.png',
+        vulnerable: 'ghostface_vulnerable.png',
+        eaten: 'ghostface_eaten.png'
+    };
+    let pacmanImageSources = {
+        regular: 'face.png',
+        dead: 'dead.png'
+    };
 
-ghostImages.normal.onerror = function() {
-    console.error('Error loading ghost normal image');
-};
+    // Assign onload and onerror for ghost images
+    Object.keys(ghostImageSources).forEach(key => {
+        let img = gameImages.ghostImages[key];
+        img.onload = imageLoaded;
+        img.onerror = () => console.error("Failed to load ghost image", key);
+        img.src = ghostImageSources[key];
+    });
 
-ghostImages.vulnerable.onerror = function() {
-    console.error('Error loading ghost vulnerable image');
-};
+    // Assign onload and onerror for Pacman images
+    Object.keys(pacmanImageSources).forEach(key => {
+        let img = gameImages.pacmanImages[key];
+        img.onload = imageLoaded;
+        img.onerror = () => console.error("Failed to load Pacman image", key);
+        img.src = pacmanImageSources[key];
+    });
+}
 
-ghostImages.eaten.onerror = function() {
-    console.error('Error loading ghost eaten image');
-};
-
-pacmanImages.regular.onerror = function() {
-    console.error('Error loading pacman regular image');
-};
-
-pacmanImages.dead.onerror = function() {
-    console.error('Error loading pacman dead image');
-};
-
-
-// Assign the onload handler for each image
-ghostImages.normal.onload = imageLoaded;
-ghostImages.vulnerable.onload = imageLoaded;
-ghostImages.eaten.onload = imageLoaded;
-pacmanImages.regular.onload = imageLoaded;
-pacmanImages.dead.onload = imageLoaded;
+// Call this function where it makes sense in your game's initialization flow
+loadGameImages();
 
 var NONE        = 4,
     UP          = 3,
@@ -418,14 +409,15 @@ Pacman.Ghost = function (game, map, colour) {
             positionCorrection = (ghostSize - blockSize) / 2,
             top = position.y / 10 * blockSize - positionCorrection,
             left = position.x / 10 * blockSize - positionCorrection,
-            img = ghostImages.normal; // Default to normal ghost image
+            img = gameImages.ghostImages.normal; // Access through gameImages
     
-        if (eatable) img = ghostImages.vulnerable;
-        else if (eaten) img = ghostImages.eaten;
+        if (eatable) img = gameImages.ghostImages.vulnerable; // Access through gameImages
+        else if (eaten) img = gameImages.ghostImages.eaten; // Access through gameImages
     
         // Draw the ghost image
         ctx.drawImage(img, left, top, ghostSize, ghostSize);
     }
+    
     
     
 
@@ -726,37 +718,34 @@ Pacman.User = function (game, map) {
             var imagePosX = ((position.x / 10) * size) + half - (imageSize / 2); // Center image on Pacman
             var imagePosY = ((position.y / 10) * size) + half - (imageSize / 2); // Center image on Pacman
     
-            ctx.drawImage(pacmanImages.dead, imagePosX, imagePosY, imageSize, imageSize);
+            ctx.drawImage(gameImages.pacmanImages.dead, imagePosX, imagePosY, imageSize, imageSize);
+
         }
     };
 
     function draw(ctx) { 
 
-        var s     = map.blockSize, 
+        var s = map.blockSize, 
             angle = calcAngle(direction, position);
-
+    
         ctx.fillStyle = "#white";
-
         ctx.beginPath();        
-
-        ctx.moveTo(((position.x/10) * s) + s / 2,
-                   ((position.y/10) * s) + s / 2);
-        
-        ctx.arc(((position.x/10) * s) + s / 2,
-                ((position.y/10) * s) + s / 2,
-                s / 2, Math.PI * angle.start, 
-                Math.PI * angle.end, angle.direction); 
-        
+        ctx.moveTo(((position.x/10) * s) + s / 2, ((position.y/10) * s) + s / 2);
+        ctx.arc(((position.x/10) * s) + s / 2, ((position.y/10) * s) + s / 2, s / 2, Math.PI * angle.start, Math.PI * angle.end, angle.direction); 
         ctx.fill(); 
+    
+        // Using scale to adjust the image size
         var scale = 1.5; // Example scale factor
-    var imageSize = map.blockSize * scale; // New scaled size of the image
-    var gridPosX = (position.x / 10) * map.blockSize; // Original grid position X
-    var gridPosY = (position.y / 10) * map.blockSize; // Original grid position Y
-    var imagePosX = gridPosX - ((imageSize - map.blockSize) / 2); // Adjusted X position
-    var imagePosY = gridPosY - ((imageSize - map.blockSize) / 2); // Adjusted Y position
-
-    ctx.drawImage(pacmanImages.regular, imagePosX, imagePosY, imageSize, imageSize);
-};
+        var imageSize = map.blockSize * scale; // New scaled size of the image
+        var gridPosX = (position.x / 10) * map.blockSize; // Original grid position X
+        var gridPosY = (position.y / 10) * map.blockSize; // Original grid position Y
+        var imagePosX = gridPosX - ((imageSize - map.blockSize) / 2); // Adjusted X position
+        var imagePosY = gridPosY - ((imageSize - map.blockSize) / 2); // Adjusted Y position
+    
+        // Correcting the reference to use the encapsulated pacmanImages
+        ctx.drawImage(gameImages.pacmanImages.regular, imagePosX, imagePosY, imageSize, imageSize);
+    };
+    
     
     initUser();
 
@@ -847,44 +836,71 @@ Pacman.Map = function (size) {
         map[pos.y][pos.x] = type;
     };
 
-    function drawPills(ctx) { 
-        if (++pillSize > 30) {
-            pillSize = 0;
-        }
-        
-        for (let i = 0; i < height; i += 1) {
-            for (let j = 0; j < width; j += 1) {
-                if (map[i][j] === Pacman.PILL) {
-                    ctx.beginPath();
-                    ctx.fillStyle = "#000";
-                    ctx.fillRect((j * blockSize), (i * blockSize), blockSize, blockSize);
+    function drawPills(ctx) {
+        ctx.imageSmoothingEnabled = true; // Enable image smoothing
+        ctx.imageSmoothingQuality = 'high'; // Set the quality of image smoothing
+        // Special pill coordinates
+        const specialPills = [
+            { x: 1, y: 2 }, // Coordinates for pill1
+            { x: 17, y: 2 }, // Coordinates for pill2
+            { x: 1, y: 16 }, // Coordinates for pill3
+            { x: 17, y: 16 } // Coordinates for pill4
+        ];
     
-                    ctx.fillStyle = "#FFF";
-                    ctx.arc((j * blockSize) + blockSize / 2, (i * blockSize) + blockSize / 2,
-                            Math.abs(5 - (pillSize / 3)), 0, Math.PI * 2, false); 
-                    ctx.fill();
-                    ctx.closePath();
+        for (let i = 0; i < specialPills.length; i++) {
+            const pill = specialPills[i];
+            const img = gameImages.pillImages[i];
+            if (map[pill.y][pill.x] === Pacman.PILL) {
+                ctx.drawImage(img, pill.x * blockSize, pill.y * blockSize, blockSize, blockSize);
+            }
+        }
+    
+        // Draw regular pills for the remaining positions
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                // Check if this position is not a special pill, then draw the regular pill
+                if (map[y][x] === Pacman.PILL && !specialPills.some(p => p.x === x && p.y === y)) {
+                    ctx.drawImage(gameImages.pillImages[0], x * blockSize, y * blockSize, blockSize, blockSize);
                 }
             }
         }
     }
     
     
+    
+    
+    
+    
+    
+    
+    
+    
+    function getPillImageByPosition(row, col) {
+        // Example logic to select an image based on position, adjust as needed
+        let selection = (row + col) % pillImages.length; // This will cycle through 0 to 3 based on pillImages array length
+        return pillImages[selection];
+    }
+    
+    
+    
     function draw(ctx) {
-        
         var i, j, size = blockSize;
-
+    
         ctx.fillStyle = "#000";
-	    ctx.fillRect(0, 0, width * size, height * size);
-
+        ctx.fillRect(0, 0, width * size, height * size);
+    
         drawWall(ctx);
         
-        for (i = 0; i < height; i += 1) {
-		    for (j = 0; j < width; j += 1) {
-			    drawBlock(i, j, ctx);
-		    }
-	    }
-    };
+        for (i = 0; i < height; i++) {
+            for (j = 0; j < width; j++) {
+                drawBlock(i, j, ctx);
+            }
+        }
+    
+        drawPills(ctx); // Ensure this line is present to draw the pills
+    }
+    
+    
     
     
     function drawBlock(y, x, ctx) {
@@ -1352,6 +1368,9 @@ var PACMAN = (function () {
     
     
     function init(wrapper, root) {
+        var blockSize = wrapper.offsetWidth / 19;
+        var pillSize = blockSize * 0.6;
+        gameImages.pillSize = pillSize;
         var i, len, ghost,
             blockSize = wrapper.offsetWidth / 19,
             canvas = document.createElement("canvas");
