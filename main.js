@@ -4,20 +4,40 @@
 // Declare global variables for Supabase client and functions
 let supabase;
 
+
 async function saveHighScore(name, score, team) {
+    let gameEndTime = new Date(); // Capture the end time in UTC
+    let duration = (gameEndTime - gameStartTime) / 1000; // Calculate duration in seconds
+
+    // Adjust for UTC+2
+    gameEndTime.setHours(gameEndTime.getHours() + 2);
+
+    let playedAt = gameEndTime.toISOString(); // Format end time for the database, adjusted to UTC+2
+
     try {
         const { data, error } = await supabase
             .from('high_scores')
-            .insert([{ name, score, team }]);
+            .insert([
+                { 
+                    name, 
+                    score, 
+                    team,
+                    time: playedAt, // Time when the game was played, adjusted to UTC+2
+                    duration: duration // Duration of the game in seconds
+                }
+            ]);
+
         if (error) {
             throw error;
         }
-        console.log('High score saved successfully', data);
+        console.log('High score, time, and duration saved successfully', data);
         await refreshAndDisplayScores(); // Refresh the high scores here
     } catch (error) {
-        console.error('Error saving high score:', error);
+        console.error('Error saving high score, time, and duration:', error);
     }
 }
+
+
 
 async function loadHighScores() {
     try {
@@ -839,6 +859,7 @@ Pacman.Map = function (size) {
     function drawPills(ctx) {
         ctx.imageSmoothingEnabled = true; // Enable image smoothing
         ctx.imageSmoothingQuality = 'high'; // Set the quality of image smoothing
+    
         // Special pill coordinates
         const specialPills = [
             { x: 1, y: 2 }, // Coordinates for pill1
@@ -847,10 +868,12 @@ Pacman.Map = function (size) {
             { x: 17, y: 16 } // Coordinates for pill4
         ];
     
+        // Adjust the size of the special pills to fill the block size as much as possible
         for (let i = 0; i < specialPills.length; i++) {
             const pill = specialPills[i];
             const img = gameImages.pillImages[i];
             if (map[pill.y][pill.x] === Pacman.PILL) {
+                // Removing the 0.6 scaling factor and using the full blockSize
                 ctx.drawImage(img, pill.x * blockSize, pill.y * blockSize, blockSize, blockSize);
             }
         }
@@ -860,11 +883,13 @@ Pacman.Map = function (size) {
             for (let x = 0; x < width; x++) {
                 // Check if this position is not a special pill, then draw the regular pill
                 if (map[y][x] === Pacman.PILL && !specialPills.some(p => p.x === x && p.y === y)) {
+                    // Use the full blockSize for regular pills too
                     ctx.drawImage(gameImages.pillImages[0], x * blockSize, y * blockSize, blockSize, blockSize);
                 }
             }
         }
     }
+    
     
     
     
@@ -1357,7 +1382,9 @@ var PACMAN = (function () {
         if (gameOverScreen) {
             gameOverScreen.style.display = 'none';
         }
-    
+        gameStartTime = new Date();
+        console.log("Game start time:", gameStartTime.toISOString());
+
         startLevel(); // Function to start or restart the game level
     }
     
