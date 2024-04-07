@@ -230,8 +230,8 @@ function loadGameImages() {
         eaten: 'ghostface_eaten.png'
     };
     let pacmanImageSources = {
-        regular: 'face.png',
-        dead: 'dead.png'
+        regular: 'pacbear.png',
+        dead: 'pacbeadDead.png'
     };
 
     // Assign onload and onerror for ghost images
@@ -1439,6 +1439,7 @@ var PACMAN = (function () {
                 playerTeam = teamSelectInput;
                 document.getElementById('start-screen').style.display = 'none';
                 loaded(); // Now start the game
+                PACMAN.startNewGame();
             }
         });
     
@@ -1450,7 +1451,7 @@ var PACMAN = (function () {
         }
         timer = setInterval(mainLoop, 1000 / Pacman.FPS);
     
-        loaded(); // Load the game assets and high scores
+        startNewGame(); // Load the game assets and high scores
     }
     
        
